@@ -2,6 +2,18 @@
 
 The app and the runner talk JSON-RPC 2.0 over a WebSocket at
 `ws://127.0.0.1:8797/rpc`. One JSON object per WebSocket text message.
+
+The app finds its runner in its data folder's `runner.json`: `host`
+(default `127.0.0.1`) and `port` (default 8797). The runner itself only
+ever listens on `127.0.0.1` and doesn't read `host`; a runner on another
+Mac is reached through `tailscale serve --tcp 8797 tcp://127.0.0.1:8797`
+there, with `host` its tailnet name (docs/guide.md, "The app on another
+Mac"). Any `host` but `127.0.0.1`, `localhost` or `::1` means the app's
+own runner is on another Mac: every path it sends (pictures, blobs, file
+links, folders, project and patch icons) is a path there, so the app reads
+them with `files.read` and keeps copies, as it does for other runners'
+threads ("Other runners' threads"), and sends pictures to `media.import`
+as bytes rather than a path.
 Both sides must ignore unknown fields and unknown event types so either can be
 upgraded first. Times are ISO 8601 strings in UTC. Ids are strings.
 
@@ -1095,7 +1107,7 @@ the summary and then the reply.
 | `approvals.respond` | `{ threadId, approvalId, decision: "allow" \| "allowAlways" \| "deny" \| "answered", message?: string, answers?: Record<string, string>, queued?: Record<string, "allow" \| "deny"> }` | `{}`. `queued` answers calls from the card's `approval.queued` list, by `itemId`, in the same click ("Queued calls"); ids not on the list are ignored, as is the whole of it from the phone or another Mac's view (`remote`). `allowAlways` on a card that didn't offer it counts as `allow`. `allowAlways` allows matching requests for the rest of this thread only; it never changes the thread's permission mode or saves anything in the project. With `answered`, the app sends the chosen answers in one line as `message` too: the runner keeps it in `approval.resolved` (only `answers` goes to the CLI), so the transcript can show what was chosen |
 | `plans.approve` | `{ threadId, itemId }` | `{}`. Go ahead on a waiting plan (see "Plan first"); `-32602` if that plan isn't waiting |
 | `secrets.answer` | `{ threadId, approvalId, secret?: string, decline?: true }` | `{}`. Answers a `secret.requested` card (Secrets). The runner never logs, emits or mirrors `secret` |
-| `media.import` | `{ path: string }` | `{ image: ImageRef }` copies a file into `inbox/` and reads its size; HEIC becomes JPEG and TIFF or BMP becomes PNG |
+| `media.import` | `{ path: string }` or `{ data: string, name?: string }` | `{ image: ImageRef }` copies a file into `inbox/` and reads its size; HEIC becomes JPEG and TIFF or BMP becomes PNG. `data` is the file's bytes in base64, from an app on another Mac (its paths aren't here), written to a temp file and copied in the same way; `name` gives it its extension. The app sends at most 40 MB, under the message cap. A runner from before `data` answers `-32602` (path must be a string) |
 | `patches.trust` | `{ threadId, files: { file, hash }[] }` | `{ trusted: string[] }`. Trusts those versions of the thread's waiting patch files (each a `file` its `patches` lists with `untrusted`, and the `hash` given there), then every thread's patches are read again, so the answer comes once they have been. The `claude` entry's file trusts the folder's Claude Code settings the same way. `-32602` for a file the thread isn't waiting on, or one whose hash has moved on since (look again). See "Trusting a folder's patches" |
 | `actions.run` | `{ threadId, actionId }` | For a prompt action, `{ turnId }`: its prompt was sent as a message (as `threads.send`). For a url action (only an older client calls it for one), `{ ok: true, durationMs }` once the page is opened on the runner's Mac, with nothing in the transcript. For a command action, `{ ok, exitCode?, durationMs, seq }` once the command has finished, with its output in the transcript as the `action.run` event at `seq`. The command runs in the thread's folder through a login shell with the thread's variables (`THREADBEAR_THREAD_ID` and the rest) and is stopped after 10 minutes. `-32602` for an action the thread doesn't have, `-32020` while the same action is still running |
 | `panels.render` | `{ threadId, panelId }` | `{ image?: ImageRef, items?: PanelItem[], note?: string }` draws an `image` panel or fills a `list` panel now. For `xcode.simulator`, a screenshot of the booted simulator (`xcrun simctl io booted screenshot`), written to the same file each time under the thread's `panels/`; with no device booted (or another failure) there's only `note`. For a `list` panel, the rows its patch's `items` function returned (at most 200), or `note` with the error when it threw or took over 20 seconds. Slow: it waits for the screenshot or the function. `-32602` for a panel the thread doesn't have |
@@ -4911,6 +4923,11 @@ Step 6 part 2 (docs/step6-plan.md). The Mac app lists every runner's
 threads: this runner's from this runner as always, the others' from the
 backend. To open one of another runner's threads the app connects to that
 runner itself. Runners never talk to each other.
+
+`files.read` and `files.list` serve the app's own runner the same way when
+that runner is on another Mac (runner.json's `host`, at the top): its
+threads' files are read through it, with no `runnerId`, and the copies are
+kept apart from other runners' under `own-<host>-<port>`.
 
 - **The sidebar table.** With a backend of API 12, each runner keeps one
   `threadIndex` row per thread there: `threadId, title, cwd, accountId,

@@ -925,6 +925,43 @@ window can be seen; a runner too old to send them says so. The runners are
 in your order, the same as in Settings > Runners and on the phone: drag one
 to change it.
 
+### The app on another Mac
+
+The app can run on a Mac with no runner of its own and use the runner on
+another of your Macs, say a laptop using the runner on a desktop that stays
+on. The runner still only listens on that Mac's `127.0.0.1`, so put it on
+your tailnet there with Tailscale:
+
+```
+tailscale serve --bg --tcp 8797 tcp://127.0.0.1:8797
+```
+
+Then, on the Mac with only the app, make Threadbear's data folder
+(`~/Library/Application Support/Threadbear`) with two files in it: a copy
+of `secrets/runner-token` from the runner's Mac, and a `runner.json` naming
+that Mac:
+
+```json
+{ "host": "mac-studio.your-tailnet.ts.net", "port": 8797 }
+```
+
+`host` is what the app dials (the default is `127.0.0.1`, this Mac), and
+`port` the runner's port (8797 unless you changed it). The token never
+travels: the app proves it has it (docs/protocol.md, "Auth").
+
+Any host other than `127.0.0.1`, `localhost` or `::1` tells the app the
+runner's folders are on that other Mac. Pictures in threads, long tool
+output, file links, Highlights, the side pane's previews and folders,
+project icons and patch icons come from the runner as you look at them,
+with copies kept in `~/Library/Caches/Threadbear/remote`. Pictures you
+paste or attach go over with the message. The runner menus show that Mac's
+name where they'd say This Mac. A few things need the folders on this Mac,
+so they say why instead of working: the Terminal panel opens in your home
+folder here and says where the thread runs, the folder pickers ask you to
+type a path on that Mac, Reveal in Finder isn't offered, design reviews say
+to open them there, and when the runner can't be reached there's no Start
+runner button: start it on its own Mac.
+
 ## Accounts, pools and Usage
 <!-- slug: accounts -->
 

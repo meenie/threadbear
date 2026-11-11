@@ -88,7 +88,9 @@ File references are where to look.
   sending it (docs/protocol.md, "Auth"); with no `.host` it dials nowhere;
   `~/Library/Caches/Threadbear/update`;
   `~/Library/Caches/Threadbear/remote` (copies of pictures and files from
-  threads on your other Macs, at most 512 MB, unused ones go after 30 days);
+  threads on your other Macs, and from your own runner's threads when the
+  app uses a runner on another Mac, at most 512 MB, unused ones go after
+  30 days);
   `~/Library/Caches/Threadbear/rich` (pictures of the ```` ```mermaid ```` and
   ```` ```html ```` blocks in replies, and each one's page for the side pane,
   newest 900 files kept). They're drawn on this Mac in web views that load
@@ -122,7 +124,12 @@ File references are where to look.
   Beside it, `threadbear-land-times.log` records how long each landing's
   check took (branch, commit, step times, no output), cut back at 1 MiB.
 - **The runner** listens on `127.0.0.1:8797` only, and needs a token
-  (`runner/src/config.ts`). It starts the official `claude` and `codex`
+  (`runner/src/config.ts`). The app dials it there, unless the app's
+  `runner.json` has a `host` (and `port`): then it dials that, a runner on
+  another of your Macs that you've put on your tailnet with `tailscale
+  serve`, and the pictures and files its threads name, and the pictures
+  you send, go over that same connection (docs/guide.md, "The app on
+  another Mac"). Nothing sets `host` for you. It starts the official `claude` and `codex`
   CLIs for your threads. Each thread's CLI gets a key of its own in its
   environment (`THREADBEAR_THREAD_KEY`), never the token. When something
   connects, the runner runs `lsof` and `ps` on that one connection to see
