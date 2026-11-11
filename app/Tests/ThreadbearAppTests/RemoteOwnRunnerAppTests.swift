@@ -98,6 +98,23 @@ final class RemoteOwnRunnerAppTests: XCTestCase {
         XCTAssertEqual(app.localCopy(of: URL(fileURLWithPath: picture), in: mine), copy.url)
     }
 
+    /// The composer's strip draws a pasted picture from the runner's inbox
+    /// copy, which is on the other Mac too.
+    func testADraftPicturesThumbnailComesThroughTheRunner() async throws {
+        let app = try app(away)
+        let transport = FilesTransport(png: Self.png())
+        let client = RPCClient(transport: transport)
+        try await client.start()
+        app.useClientForTesting(client)
+        let inbox = "/Users/someone/Library/Application Support/Threadbear/inbox/\(UUID().uuidString).png"
+        let image: CGImage? = await withCheckedContinuation { done in
+            app.loadRunnerThumbnail(inbox, maxPixels: 64) { done.resume(returning: $0) }
+        }
+        XCTAssertNotNil(image)
+        XCTAssertEqual(transport.calls.map(\.method), ["files.read"])
+        XCTAssertEqual(transport.calls.first?.params["path"] as? String, inbox)
+    }
+
     func testRemoteCopyRefusesAThreadWhoseFilesAreHere() async throws {
         let app = try app(local)
         let mine = try XCTUnwrap(app.threads["t1"])

@@ -141,6 +141,17 @@ extension AppModel {
         return folder.isEmpty ? nil : folder
     }
 
+    /// A thumbnail of a picture the own runner holds (a draft's ImageRef,
+    /// in its inbox). While that runner is on another Mac the path is
+    /// there, so its copy is fetched first; otherwise it's read as it is.
+    func loadRunnerThumbnail(_ path: String, maxPixels: Int, completion: @escaping @MainActor (CGImage?) -> Void) {
+        guard runnerAway else { return ThumbnailLoader.shared.load(path: path, maxPixels: maxPixels, completion: completion) }
+        Task { @MainActor in
+            guard let url = try? await ownRunnerCopy(path) else { return completion(nil) }
+            ThumbnailLoader.shared.load(path: url.path, maxPixels: maxPixels, completion: completion)
+        }
+    }
+
     var remoteFiles: RemoteFileStore {
         if let remoteFileStore { return remoteFileStore }
         let store = RemoteFileStore(root: RemoteFileStore.root(dataDir: dataDir))

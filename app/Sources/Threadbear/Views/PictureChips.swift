@@ -137,13 +137,20 @@ final class PictureAttachment: NSTextAttachment {
         let cell = PictureChipCell()
         attachmentCell = cell
         cell.attachment = self
+        // The file pasted here while it's copied in; after, the runner's
+        // copy, which is fetched when the runner is on another Mac.
         let path = picture?.path ?? source
         thumbnail = ThumbnailLoader.shared.cached(path: path, maxPixels: Self.thumbnailPixels)
         if thumbnail == nil {
-            ThumbnailLoader.shared.load(path: path, maxPixels: Self.thumbnailPixels) { [weak self] image in
+            let done: @MainActor (CGImage?) -> Void = { [weak self] image in
                 guard let self, let image else { return }
                 self.thumbnail = image
                 self.owner?.needsDisplay = true
+            }
+            if picture != nil {
+                MainActor.assumeIsolated { AppModel.shared.loadRunnerThumbnail(path, maxPixels: Self.thumbnailPixels, completion: done) }
+            } else {
+                ThumbnailLoader.shared.load(path: path, maxPixels: Self.thumbnailPixels, completion: done)
             }
         }
     }

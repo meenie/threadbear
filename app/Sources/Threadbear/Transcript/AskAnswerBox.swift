@@ -313,7 +313,7 @@ private final class AnswerThumb: NSView {
         remove.setTip("Remove")
         remove.setAccessibilityLabel("Remove picture")
         addSubview(remove)
-        ThumbnailLoader.shared.load(path: path, maxPixels: Int(AskBoxMetrics.thumb * 4)) { [weak self] image in
+        AppModel.shared.loadRunnerThumbnail(path, maxPixels: Int(AskBoxMetrics.thumb * 4)) { [weak self] image in
             guard let self, let image else { return }
             // Filled into the square, as the composer's are.
             self.imageView.layer?.contents = image

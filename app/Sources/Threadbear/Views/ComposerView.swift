@@ -570,7 +570,8 @@ private struct AsyncThumbnail: View {
         .onAppear {
             // Filled into a square, so the short side needs the 2x pixels:
             // decode a bit larger than the tile or wide shots come out soft.
-            ThumbnailLoader.shared.load(path: path, maxPixels: Int(AttachmentThumbnail.size * 4)) { image = $0 }
+            // The runner's copy in its inbox: fetched when it's on another Mac.
+            AppModel.shared.loadRunnerThumbnail(path, maxPixels: Int(AttachmentThumbnail.size * 4)) { image = $0 }
         }
     }
 }
