@@ -950,6 +950,15 @@ test('images are copied into the thread media folder and sent with the message',
   assert.ok(fs.existsSync(um.images[0].path), 'the thread keeps its copy when inbox is cleaned');
 });
 
+test('media.import takes the bytes from an app on another Mac', () => {
+  const h = makeHarness();
+  const { image } = h.runner.importMediaData(makePng(12, 7).toString('base64'), 'Screenshot 2026-11-10.png');
+  assert.ok(image.path.startsWith(path.join(h.home, 'inbox')));
+  assert.deepEqual([image.mediaType, image.width, image.height], ['image/png', 12, 7]);
+  assert.throws(() => h.runner.importMediaData('', 'x.png'), (e: RpcError) => e.code === -32602);
+  assert.throws(() => h.runner.importMediaData(Buffer.from('not a picture').toString('base64'), '../../evil.png'), (e: RpcError) => e.code === -32602);
+});
+
 test('default account is the last one used', () => {
   const h = makeHarness();
   assert.equal(h.runner.hello().defaults.accountId, 'claude-main');

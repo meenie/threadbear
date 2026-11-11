@@ -725,6 +725,12 @@ final class AppModel {
     var sharePopoverThread: String?
 
     @ObservationIgnored var client: RPCClient?
+    /// Where the app's own runner is, from runner.json, set as it connects.
+    /// Its `isRemote` (a `host` that isn't this Mac) makes every path that
+    /// runner sends one on that Mac (`fileSource(of:)`).
+    var runnerEndpoint: RunnerEndpoint? {
+        didSet { if oldValue?.filesKey != runnerEndpoint?.filesKey { runnerAwayChanged() } }
+    }
     @ObservationIgnored var sessions: [String: ThreadSession] = [:]
     /// Sub-agent transcripts, keyed by `SubagentRef.key`. A handful at most.
     @ObservationIgnored var subagentSessions: [String: ThreadSession] = [:]

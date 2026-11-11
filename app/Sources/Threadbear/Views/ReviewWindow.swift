@@ -13,8 +13,10 @@ extension AppModel {
         // Mac, and read here they'd be whatever this Mac has at those paths
         // (Codex review, 7 Nov). Its answers went to this Mac's runner too,
         // which doesn't have it, so it never worked from here.
-        if let thread = threads[threadId], thread.isRemote {
-            errorMessage = "This review is on \(runnerName(of: thread) ?? "another Mac"). Open it there for now."
+        // The same for the app's own runner on another Mac (runner.json's
+        // host): the answers would reach it, but the pictures are there.
+        if let thread = threads[threadId], filesAway(thread) {
+            errorMessage = "This review is on \(awayName(of: thread) ?? "another Mac"). Open it there for now."
             return
         }
         let key = threadId + "/" + review.id

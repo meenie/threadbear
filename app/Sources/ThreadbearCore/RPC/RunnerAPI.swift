@@ -297,6 +297,14 @@ public extension RPCClient {
     func importMedia(path: String) async throws -> ImageRef {
         try await call("media.import", .object(["path": .string(path)]), as: MediaImportResult.self).image
     }
+
+    /// The same with the picture's bytes, for a runner on another Mac
+    /// (`RunnerEndpoint.isRemote`), which can't open a path on this one.
+    /// `name` gives the runner the file's extension.
+    func importMedia(data: Data, name: String) async throws -> ImageRef {
+        try await call("media.import", .object(["data": .string(data.base64EncodedString()), "name": .string(name)]),
+                       as: MediaImportResult.self, timeout: .seconds(120)).image
+    }
 }
 
 // MARK: Usage history (docs/protocol.md, "Usage history")

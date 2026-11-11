@@ -121,7 +121,7 @@ private struct DecisionAsks: NSViewRepresentable {
 
     func sizeThatFits(_ proposal: ProposedViewSize, nsView: DecisionAsksHost, context: Context) -> CGSize? {
         let width = ComposerCardHost.measuringWidth(proposal.width)
-        return CGSize(width: width, height: nsView.rendered(card, local: !thread.isRemote, width: width).height)
+        return CGSize(width: width, height: nsView.rendered(card, local: !app.filesAway(thread), width: width).height)
     }
 }
 
@@ -167,10 +167,11 @@ final class DecisionAsksHost: NSView, TranscriptThreadHost, RowCellDelegate {
     required init?(coder: NSCoder) { fatalError() }
 
     func show(_ card: AsksCard, thread: ThreadSummary) {
-        guard card != self.card || thread.id != threadId || local != !thread.isRemote else { return }
+        let local = !(app?.filesAway(thread) ?? false)
+        guard card != self.card || thread.id != threadId || self.local != local else { return }
         self.card = card
         threadId = thread.id
-        local = !thread.isRemote
+        self.local = local
         needsLayout = true
     }
 

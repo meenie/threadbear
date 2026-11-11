@@ -1450,7 +1450,7 @@ enum Automation {
             // output while the window is behind others, so look with `shot`
             // after `front` (ask Mike first).
             if c["toggle"] as? Bool == true { app.toggleTerminal() }
-            let target = TerminalTarget.for(app.selectedThread) { app.runnerName(of: $0) }
+            let target = TerminalTarget.for(app.selectedThread) { app.awayName(of: $0) }
             if let text = c["type"] as? String { Terminals.shared.open(target).type(text) }
             if let command = c["put"] as? String { app.putInTerminal(ShellBlock(command: command), from: app.selection) { _ in } }
             if let ms = c["wait"] as? Int { try? await Task.sleep(for: .milliseconds(ms)) }

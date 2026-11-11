@@ -18,7 +18,7 @@ struct RunnersSettings: View {
                             ask: "change it, or to set up another machine to run threads on.") {
                 LabeledContent("New threads start on") {
                     Picker("New threads start on", selection: defaultBinding) {
-                        Label("This Mac", systemImage: app.selfRunnerIcon).tag(String?.none)
+                        Label(app.selfRunnerTitle, systemImage: app.selfRunnerIcon).tag(String?.none)
                         ForEach(app.remoteRunners) { runner in
                             Label(runner.name, systemImage: RunnerIcon.symbol(runner.icon)).tag(String?.some(runner.id))
                         }
@@ -43,7 +43,7 @@ struct RunnersSettings: View {
                             .frame(minHeight: 38)
                     }
                 } else {
-                    RunnerRow(icon: app.selfRunnerIcon, name: selfName, status: "This Mac", isDefault: app.defaultRunnerId == nil)
+                    RunnerRow(icon: app.selfRunnerIcon, name: selfName, status: app.runnerAway ? "This app's runner" : "This Mac", isDefault: app.defaultRunnerId == nil)
                     ForEach(app.remoteRunners) { runner in
                         RunnerRow(icon: RunnerIcon.symbol(runner.icon), name: runner.name, status: status(runner), isDefault: app.defaultRunnerId == runner.id)
                     }
@@ -74,12 +74,12 @@ struct RunnersSettings: View {
         if let runner = app.remoteRunners.first(where: { $0.id == id }) {
             RunnerRow(icon: RunnerIcon.symbol(runner.icon), name: runner.name, status: status(runner), isDefault: app.defaultRunnerId == runner.id, movable: movable)
         } else {
-            RunnerRow(icon: app.selfRunnerIcon, name: selfName, status: "This Mac", isDefault: app.defaultRunnerId == nil, movable: movable)
+            RunnerRow(icon: app.selfRunnerIcon, name: selfName, status: app.runnerAway ? "This app's runner" : "This Mac", isDefault: app.defaultRunnerId == nil, movable: movable)
         }
     }
 
     /// This runner's own name, as other machines see it ("M5").
-    private var selfName: String { app.runners.first(where: \.isSelf)?.name ?? "This Mac" }
+    private var selfName: String { app.runners.first(where: \.isSelf)?.name ?? app.selfRunnerTitle }
 
     private func status(_ runner: RemoteRunner) -> String {
         if app.directRemoteLink, runner.tokenFile == nil { return "Not paired with this Mac" }

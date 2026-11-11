@@ -59,7 +59,7 @@ struct FolderBrowser: NSViewRepresentable {
         let app = app
         let thread = thread
         let source: FolderPaneView.Source
-        if thread.isRemote {
+        if app.filesAway(thread) {
             source = { [weak app] folder in
                 guard let app else { throw RPCError.disconnected(nil) }
                 let client = try await app.openClient(for: thread.id)

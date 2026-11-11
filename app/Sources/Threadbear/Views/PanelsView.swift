@@ -1165,7 +1165,7 @@ private struct ImagePanel: View {
                 // A new NSImage each time: the file's name doesn't change.
                 // Another Mac's picture is that Mac's file, fetched from it,
                 // never this Mac's file at that path (Codex review, 7 Nov).
-                if let path = result?.image?.path, let thread = app.threads[threadId], thread.isRemote {
+                if let path = result?.image?.path, let thread = app.threads[threadId], app.filesAway(thread) {
                     let copy = try? await app.remoteCopy(path, in: thread)
                     image = copy.flatMap { $0.truncated ? nil : NSImage(contentsOf: $0.url) }
                 } else {

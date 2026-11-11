@@ -317,7 +317,14 @@ struct ThreadSettings {
             menu.addItem(item)
         }
         menu.addItem(.separator())
-        menu.addItem(ActionMenuItem("Choose…", symbol: "folder.badge.plus") { chooseFolder() })
+        if app.runnerAway {
+            // The runner's folders are on its Mac: no picker here can show them.
+            let other = ActionMenuItem("Other…", symbol: "character.cursor.ibeam") { typeRemoteFolder() }
+            other.subtitle = "A folder on \(app.selfRunnerName)"
+            menu.addItem(other)
+        } else {
+            menu.addItem(ActionMenuItem("Choose…", symbol: "folder.badge.plus") { chooseFolder() })
+        }
         return menu
     }
 
@@ -343,7 +350,7 @@ struct ThreadSettings {
 
     /// Asks for a path on the other Mac, as there's no folder picker for it.
     private func typeRemoteFolder() {
-        let name = app.newThreadRunner?.name ?? "that Mac"
+        let name = draftRunnerId == nil ? app.selfRunnerName : app.newThreadRunner?.name ?? "that Mac"
         let alert = NSAlert()
         alert.messageText = "A folder on \(name)"
         alert.informativeText = "Its full path, like /Users/\(name)/dev."
@@ -365,7 +372,7 @@ struct ThreadSettings {
         let menu = NSMenu()
         let chosen = app.newThreadRunnerId
         let byDefault = app.defaultRunnerId
-        let here = ActionMenuItem("This Mac", symbol: app.selfRunnerIcon, checked: chosen == nil) { app.chooseNewThreadRunner(nil) }
+        let here = ActionMenuItem(app.selfRunnerTitle, symbol: app.selfRunnerIcon, checked: chosen == nil) { app.chooseNewThreadRunner(nil) }
         if byDefault == nil { here.markDefault() }
         menu.addItem(here)
         menu.addItem(.separator())
@@ -379,7 +386,7 @@ struct ThreadSettings {
         // is; the star above says which it is. Settings > Runners has it too.
         menu.addItem(.separator())
         let defaults = NSMenu()
-        defaults.addItem(ActionMenuItem("This Mac", symbol: app.selfRunnerIcon, checked: byDefault == nil) { app.setDefaultRunner(nil) })
+        defaults.addItem(ActionMenuItem(app.selfRunnerTitle, symbol: app.selfRunnerIcon, checked: byDefault == nil) { app.setDefaultRunner(nil) })
         for runner in app.remoteRunners {
             defaults.addItem(ActionMenuItem(runner.name, symbol: RunnerIcon.symbol(runner.icon), checked: byDefault == runner.id) { app.setDefaultRunner(runner.id) })
         }

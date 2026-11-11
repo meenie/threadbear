@@ -26,6 +26,7 @@ extension AppModel {
             var attempt: RPCClient?
             do {
                 let endpoint = try RunnerConfig.endpoint(dataDir: dataDir)
+                if runnerEndpoint != endpoint { runnerEndpoint = endpoint }
                 let client = RPCClient(transport: WebSocketTransport(url: endpoint.url, token: endpoint.token))
                 attempt = client
                 try await client.start()

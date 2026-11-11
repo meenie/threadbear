@@ -325,7 +325,7 @@ struct ScheduleEditor: View {
         let others = app.runners.filter { !$0.isSelf }
         if state.isNew, !others.isEmpty {
             Picker("Runs on", selection: $state.runnerId) {
-                Label("This Mac", systemImage: app.selfRunnerIcon).labelStyle(.titleAndIcon).tag(String?.none)
+                Label(app.selfRunnerTitle, systemImage: app.selfRunnerIcon).labelStyle(.titleAndIcon).tag(String?.none)
                 Divider()
                 ForEach(others) { runner in
                     // Still a choice: it runs once that Mac is back.
@@ -346,7 +346,7 @@ struct ScheduleEditor: View {
             }
         } else if !state.isNew, state.isAway || !others.isEmpty {
             LabeledContent("Runs on") {
-                Label(awayName ?? "This Mac", systemImage: awayIcon ?? app.selfRunnerIcon)
+                Label(awayName ?? app.selfRunnerTitle, systemImage: awayIcon ?? app.selfRunnerIcon)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
@@ -437,6 +437,11 @@ private struct FolderMenu: View {
     }
 
     private func choose() {
+        if app.runnerAway {
+            // The runner's folders are on its Mac; a picker here shows this one's.
+            if let folder = app.askRunnerFolder("A folder on \(app.selfRunnerName)", current: cwd) { cwd = folder }
+            return
+        }
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true
         panel.canChooseFiles = false

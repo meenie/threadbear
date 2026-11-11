@@ -381,6 +381,12 @@ private struct GeneralSettings: View {
     }
 
     private func chooseFolder(from current: String) {
+        if app.runnerAway {
+            if let folder = app.askRunnerFolder("The default folder on \(app.selfRunnerName)", current: current) {
+                app.updateSettings(SettingsUpdate(defaultCwd: folder))
+            }
+            return
+        }
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
@@ -461,6 +467,12 @@ private struct ModelSettings: View {
     }
 
     private func addPrivateFolder(_ current: [String]) {
+        if app.runnerAway {
+            if let folder = app.askRunnerFolder("A private folder on \(app.selfRunnerName)").map { SettingsText.folder($0) }, !current.contains(folder) {
+                app.updateSettings(SettingsUpdate(privateFolders: current + [folder]))
+            }
+            return
+        }
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
@@ -680,6 +692,13 @@ private struct PoolSettings: View {
     }
 
     private func addFolders(to pool: Pool) {
+        if app.runnerAway {
+            guard let folder = app.askRunnerFolder("A folder on \(app.selfRunnerName) for \(pool.title)").map { SettingsText.folder($0) },
+                  !pool.folders.contains(folder) else { return }
+            var changed = pool
+            changed.folders.append(folder)
+            return change(changed)
+        }
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true
         panel.canChooseFiles = false

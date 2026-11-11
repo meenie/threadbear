@@ -10,6 +10,40 @@ public struct RunnerEndpoint: Sendable, Equatable {
         self.url = url
         self.token = token
     }
+
+    /// The host the app dials: runner.json's `host`, 127.0.0.1 by default.
+    public var host: String { url.host.map(RunnerConfig.bareHost) ?? "127.0.0.1" }
+
+    /// The runner is on another Mac (runner.json's `host` is a tailnet name
+    /// or an address, reached through `tailscale serve`): the paths it sends
+    /// (pictures, blobs, project icons, file links, thread folders) are on
+    /// that Mac, not this one. Anything but this Mac's loopback names.
+    public var isRemote: Bool { RunnerConfig.isRemote(host: host) }
+
+    /// What the app's copies of that runner's files are kept under in the
+    /// cache (RemoteFileCache's `runnerId`), apart from other runners' and
+    /// from another runner.json pointing somewhere else.
+    public var filesKey: String { "own-\(host)-\(url.port ?? RunnerConfig.defaultPort)" }
+}
+
+/// Where the app reads a file a thread or project names: this Mac's disk,
+/// or `files.read` on a runner (docs/protocol.md, "Other runners' threads"),
+/// keyed for RemoteFileCache.
+public enum FileSource: Sendable, Equatable {
+    case disk
+    case runner(String)
+
+    /// Another runner's thread reads from that runner (`threadRunnerId`).
+    /// The app's own runner's threads, and things with no thread (a
+    /// project's icon, a patch's), read from disk, unless that runner is
+    /// on another Mac (`ownRunner` remote): then from it.
+    public static func of(threadRunnerId: String?, ownRunner: RunnerEndpoint?) -> FileSource {
+        if let threadRunnerId { return .runner(threadRunnerId) }
+        if let ownRunner, ownRunner.isRemote { return .runner(ownRunner.filesKey) }
+        return .disk
+    }
+
+    public var isDisk: Bool { self == .disk }
 }
 
 public enum RunnerConfig {
@@ -34,12 +68,28 @@ public enum RunnerConfig {
         return defaultDataDir
     }
 
+    /// Whether `host` is another Mac's: anything but 127.0.0.1, localhost
+    /// and ::1 (case, a trailing dot and IPv6 brackets aside).
+    public static func isRemote(host: String) -> Bool {
+        let bare = bareHost(host).lowercased()
+        return !["127.0.0.1", "localhost", "::1", ""].contains(bare)
+    }
+
+    static func bareHost(_ host: String) -> String {
+        var bare = host.trimmingCharacters(in: .whitespaces)
+        if bare.hasPrefix("["), bare.hasSuffix("]") { bare = String(bare.dropFirst().dropLast()) }
+        if bare.hasSuffix(".") { bare.removeLast() }
+        return bare
+    }
+
     public enum LoadError: Error, Equatable, LocalizedError {
         case missingToken(String)
+        case badHost(String)
 
         public var errorDescription: String? {
             switch self {
             case .missingToken(let path): return "There's no runner token at \(path) yet."
+            case .badHost(let host): return "runner.json's host \"\(host)\" isn't one the app can reach."
             }
         }
     }
@@ -59,7 +109,10 @@ public enum RunnerConfig {
         }
         let token = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !token.isEmpty else { throw LoadError.missingToken(tokenURL.path) }
-        return RunnerEndpoint(url: URL(string: "ws://\(host):\(port)/rpc")!, token: token)
+        // An IPv6 address goes in brackets, or the URL can't be made.
+        let dialled = host.contains(":") && !host.hasPrefix("[") ? "[\(host)]" : host
+        guard let url = URL(string: "ws://\(dialled):\(port)/rpc") else { throw LoadError.badHost(host) }
+        return RunnerEndpoint(url: url, token: token)
     }
 }
 

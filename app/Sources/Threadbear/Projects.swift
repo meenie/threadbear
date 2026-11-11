@@ -109,6 +109,12 @@ extension AppModel {
     /// Asks for a folder and adds it: the project's patches load from it.
     func addProjectFolder(_ id: String) {
         guard let project = project(id) else { return }
+        if runnerAway {
+            // The runner's folders are on its Mac; a picker here shows this one's.
+            guard let folder = askRunnerFolder("Add a folder on \(selfRunnerName) to \(project.title)"),
+                  let current = self.project(id), !current.folders.contains(folder) else { return }
+            return updateProject(id, ProjectUpdate(folders: current.folders + [folder]))
+        }
         projectFilePicker.choose(configure: { panel in
             panel.canChooseDirectories = true
             panel.canChooseFiles = false
@@ -136,12 +142,15 @@ extension AppModel {
             panel.allowedContentTypes = [.png, .jpeg, .webP, .svg, .icns, .ico, .gif, .heic, .tiff]
             panel.prompt = "Use"
             panel.message = "Choose an icon for \(project.title)"
-            if let first = project.folders.first { panel.directoryURL = URL(fileURLWithPath: first) }
+            if !self.runnerAway, let first = project.folders.first { panel.directoryURL = URL(fileURLWithPath: first) }
         }) { [weak self] url in
             guard let self, let url, self.project(id) != nil else { return }
             self.whileBusy(BusyKey.projectIcon(id)) { [self] in
                 do {
-                    self.replace(try await client.setProjectIcon(id, path: url.standardizedFileURL.path))
+                    // A runner on another Mac can't open this Mac's file: the
+                    // picture goes over first, and its copy there is the icon.
+                    let path = self.runnerAway ? try await self.importImage(url, client: client).path : url.standardizedFileURL.path
+                    self.replace(try await client.setProjectIcon(id, path: path))
                 } catch {
                     self.show(error)
                 }

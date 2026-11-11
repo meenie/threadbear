@@ -235,7 +235,7 @@ extension AppModel {
     func toggleTerminal() {
         if terminalShown { return dock.close(WindowDock.terminal) }
         bringUpTerminal()
-        Terminals.shared.open(TerminalTarget.for(selectedThread) { runnerName(of: $0) })
+        Terminals.shared.open(TerminalTarget.for(selectedThread) { awayName(of: $0) })
     }
 
     /// Whether a ```bash block in `threadId`'s transcript may put its
@@ -252,14 +252,14 @@ extension AppModel {
     /// Nov).
     func canPutInTerminal(from threadId: String?) -> Bool {
         guard let threadId, threadId == selection, let thread = threads[threadId] else { return false }
-        return TerminalTarget.for(thread) { runnerName(of: $0) }.note == nil
+        return TerminalTarget.for(thread) { awayName(of: $0) }.note == nil
     }
 
     /// A ```bash block's play icon: the command at its thread's prompt,
     /// checked again here against the thread it came from.
     func putInTerminal(_ block: ShellBlock, from threadId: String?, done: @escaping @MainActor (Terminals.PutOutcome) -> Void) {
         guard canPutInTerminal(from: threadId), let threadId, let thread = threads[threadId] else { return }
-        let target = TerminalTarget.for(thread) { runnerName(of: $0) }
+        let target = TerminalTarget.for(thread) { awayName(of: $0) }
         guard target.key == .thread(threadId) else { return }
         if !terminalShown { bringUpTerminal() }
         Terminals.shared.put(block, in: target, done: done)

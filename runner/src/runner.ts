@@ -3014,6 +3014,26 @@ export class Runner {
     }
   }
 
+  // media.import with the picture's bytes rather than a path: from a Mac
+  // app on another Mac (runner.json's host), whose files aren't here. The
+  // bytes go through the same copy as a path, so HEIC and TIFF are still
+  // converted; `name` only gives the temp file its extension.
+  importMediaData(data: string, name?: string): { image: ImageRef } {
+    const bytes = Buffer.from(data, 'base64');
+    if (!bytes.length) throw new RpcError(ErrorCode.badParams, 'data is empty or not base64');
+    const ext = path.extname(path.basename(name ?? '')).replace(/[^.A-Za-z0-9]/g, '').slice(0, 12);
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'threadbear-import-'));
+    try {
+      const src = path.join(dir, `picture${ext}`);
+      fs.writeFileSync(src, bytes);
+      return { image: copyImageInto(paths.inbox(this.cfg.home), src) };
+    } catch (e) {
+      throw new RpcError(ErrorCode.badParams, (e as Error).message);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
   // ------------------------------------------------------------- approvals
 
   // ---------------------------------------------------------- idle release

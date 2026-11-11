@@ -51,7 +51,7 @@ final class TranscriptController: NSObject, NSTableViewDataSource, NSTableViewDe
     /// from this Mac's runner.
     var localPictures: Bool {
         guard let session, let app = session.app else { return true }
-        return !app.isRemote(session.threadId)
+        return !app.filesAway(session.threadId)
     }
 
     nonisolated static let renders = RenderCache()

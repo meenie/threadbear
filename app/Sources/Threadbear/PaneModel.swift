@@ -162,7 +162,7 @@ extension AppModel {
     /// browser. `shownByAgent`: a pin with `show` coming up by itself,
     /// which only ever goes to the pane or the browser, never another app.
     func open(_ highlight: Highlight, in thread: ThreadSummary, external: Bool, shownByAgent: Bool = false) {
-        if let path = highlight.path, thread.isRemote {
+        if let path = highlight.path, filesAway(thread) {
             // On that Mac: fetched, then its copy here is used.
             openRemoteFile(URL(fileURLWithPath: path), external && !shownByAgent ? .app : .panel, in: thread, title: highlight.title)
         } else if let path = highlight.path {
@@ -182,7 +182,7 @@ extension AppModel {
     /// (a project file in its app), a page where "Default" says (the
     /// browser unless Mike picked the panel).
     func openLink(_ url: URL, title: String? = nil, in thread: ThreadSummary, external: Bool = false) {
-        if url.isFileURL, thread.isRemote {
+        if url.isFileURL, filesAway(thread) {
             openRemoteFile(url, external ? .app : .panel, in: thread, title: title)
         } else if external || (url.isFileURL && FileLinkAction.opensInItsApp(url.path)) {
             openExternally(url)
@@ -206,7 +206,7 @@ extension AppModel {
     }
 
     func preview(path: String, title: String? = nil, in thread: ThreadSummary) {
-        if thread.isRemote { return openRemoteFile(URL(fileURLWithPath: path), .panel, in: thread, title: title) }
+        if filesAway(thread) { return openRemoteFile(URL(fileURLWithPath: path), .panel, in: thread, title: title) }
         let target: PanePreview.Target = FolderListing.isBrowsable(path) ? .folder(path) : .file(path)
         show(PanePreview(target: target, title: title ?? (path as NSString).lastPathComponent, from: paneSection(for: thread)), in: thread.id)
     }
@@ -276,7 +276,7 @@ extension AppModel {
     func openFromFolder(_ entry: FolderEntry, from memory: FolderMemory, showing current: PanePreview, in thread: ThreadSummary) {
         if entry.isFolder { return browseFolder(entry.path, from: memory, showing: current, in: thread) }
         let back = backStack(of: current, leaving: memory)
-        if thread.isRemote {
+        if filesAway(thread) {
             return openRemoteFile(URL(fileURLWithPath: entry.path), .panel, in: thread, title: entry.name, back: back, from: current.from)
         }
         if entry.isPackage || FileLinkAction.opensInItsApp(entry.path) { return openExternally(URL(fileURLWithPath: entry.path)) }
@@ -291,7 +291,7 @@ extension AppModel {
     /// link there does.
     func filesPanelPreview(for thread: ThreadSummary) -> PanePreview {
         var preview = PanePreview(target: .folder(thread.cwd), title: "Files", from: .panel(BuiltinPanels.files))
-        if thread.isRemote { preview.away = runnerName(of: thread) ?? "another Mac" }
+        if filesAway(thread) { preview.away = awayName(of: thread) ?? "another Mac" }
         return preview
     }
 
@@ -314,7 +314,7 @@ extension AppModel {
     /// its app: this Mac's own, or another Mac's fetched copy. Never the
     /// file here that has that other Mac's path.
     func openFile(_ path: String, of thread: ThreadSummary) {
-        if thread.isRemote {
+        if filesAway(thread) {
             openRemoteFile(URL(fileURLWithPath: path), .app, in: thread)
         } else {
             openExternally(URL(fileURLWithPath: path))
@@ -323,7 +323,7 @@ extension AppModel {
 
     /// Where a copy of `thread`'s runner's files comes from, for OpenGate.
     func copyOrigin(of thread: ThreadSummary) -> OpenGate.Origin {
-        .otherMac(name: runnerName(of: thread) ?? "another Mac", root: remoteFiles.cache.root)
+        .otherMac(name: awayName(of: thread) ?? "another Mac", root: remoteFiles.cache.root)
     }
 
     /// Whether `url` is in this Mac's copies of other Macs' files.
@@ -346,7 +346,7 @@ extension AppModel {
     /// file here that the drag then handed out (Daybreak, 7 Nov).
     func localCopy(of url: URL, in thread: ThreadSummary?) -> URL? {
         guard url.isFileURL else { return url }
-        guard let thread, let runnerId = thread.runnerId else { return url }
+        guard let thread, case .runner(let runnerId) = fileSource(of: thread) else { return url }
         guard let copy = remoteFiles.ready(url.path, runnerId: runnerId), !copy.truncated else { return nil }
         return copy.url
     }
@@ -359,7 +359,7 @@ extension AppModel {
     /// its right-click menu (FileLinkAction.click); ⌘-click and a project
     /// file open in the file's own app (FileLinkAction.forClick).
     func openTranscriptFileLink(_ url: URL, commandKey: Bool) -> Bool {
-        openTranscriptFile(url, FileLinkAction.forClick(on: url.path, commandKey: commandKey, remote: linkThread?.isRemote == true))
+        openTranscriptFile(url, FileLinkAction.forClick(on: url.path, commandKey: commandKey, remote: linkThread.map(filesAway) == true))
     }
 
     /// `url` is a file URL, perhaps with a `?query` or `#fragment` for the
@@ -371,7 +371,7 @@ extension AppModel {
         // a panel isn't the selected one, whose pane isn't its (Codex review).
         let thread = linkThread
         let inPane = thread != nil && thread?.id == selection && openProjectId == nil
-        if let thread, thread.isRemote {
+        if let thread, filesAway(thread) {
             // Its own pane only when it's the one showing; else its app.
             openRemoteFile(url, inPane || action == .finder ? action : .app, in: thread)
             return true
@@ -426,7 +426,7 @@ extension AppModel {
         // Another runner's paths are that Mac's, so nothing is looked for
         // here: the path as written, or from the thread's folder there,
         // and its runner says whether it's there when it's fetched.
-        if let thread, thread.isRemote {
+        if let thread, filesAway(thread) {
             return FilePathRefs.fileLink(text, root: thread.cwd, known: known, home: remoteHome(of: thread),
                                          exists: { $0.hasPrefix("/") }, search: { _, _ in nil })
         }

@@ -80,7 +80,8 @@ private struct IconButton: View {
             if project.icon?.isChosen == true {
                 Button("Use the Librarian's Icon", systemImage: "books.vertical") { app.setProjectIconAutomatic(project.id) }
             }
-            if let from = project.icon?.from {
+            // On the runner's Mac when that isn't this one: nothing here to show.
+            if let from = project.icon?.from, !app.runnerAway {
                 Divider()
                 Button("Show Original in Finder", systemImage: "folder") { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: from)]) }
             }
@@ -535,10 +536,17 @@ private struct FolderRow: View {
                 .font(.system(size: zoomed(12)))
                 .foregroundStyle(.secondary)
                 .frame(width: zoomed(16))
-            PlainLink(title: folder.abbreviatingHome, help: "Show in Finder") {
-                NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: folder)])
+            if app.runnerAway {
+                // A folder on the runner's Mac: the Finder here can't show it.
+                Text(folder.abbreviatingHome)
+                    .font(.system(size: TypeScale.label))
+                    .tip("This folder is on \(app.selfRunnerName), so it can't be shown in Finder here")
+            } else {
+                PlainLink(title: folder.abbreviatingHome, help: "Show in Finder") {
+                    NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: folder)])
+                }
+                .font(.system(size: TypeScale.label))
             }
-            .font(.system(size: TypeScale.label))
             Spacer(minLength: zoomed(8))
             Button { app.removeProjectFolder(project.id, folder) } label: { Image(systemName: "minus.circle") }
                 .buttonStyle(RowIconButtonStyle())
@@ -674,7 +682,7 @@ private struct PatchesSection: View {
                                 .foregroundStyle(.secondary)
                         }
                     }
-                    if item.patch.file == nil, item.thread.isRemote, let from = item.patch.folder {
+                    if item.patch.file == nil, app.filesAway(item.thread), let from = item.patch.folder {
                         // Another Mac's folder: nothing here to show it in.
                         Text(from.abbreviatingHome)
                             .font(.system(size: TypeScale.small))
@@ -683,7 +691,7 @@ private struct PatchesSection: View {
                         PlainLink(title: from.abbreviatingHome, help: item.patch.file == nil ? "Show the folder in Finder" : "Open the file") {
                             if let file = item.patch.file {
                                 app.openFile(file, of: item.thread)
-                            } else if !item.thread.isRemote {
+                            } else if !app.filesAway(item.thread) {
                                 // Another Mac's folder isn't one here to show.
                                 NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: from)])
                             }

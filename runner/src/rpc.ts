@@ -816,6 +816,8 @@ export class RpcServer {
       case 'pools.save':
         return r.savePools(p.pools);
       case 'media.import':
+        // The bytes themselves from an app on another Mac; a path otherwise.
+        if (typeof p.data === 'string') return r.importMediaData(p.data, optString(p, 'name'));
         return r.importMedia(reqString(p, 'path'));
       case 'panels.render':
         return r.renderPanel(reqString(p, 'threadId'), reqString(p, 'panelId'));

@@ -94,6 +94,14 @@ extension AppModel {
             switch connection {
             case .runnerDown(let reason):
                 // One plain sentence; the raw reason is in the tooltip.
+                // On another Mac (runner.json's host) there's no LaunchAgent
+                // here to start: it's started there, and reached through
+                // tailscale serve.
+                if runnerAway {
+                    return Banner(style: .warning, icon: "bolt.horizontal.circle", text: "Can't reach the runner on \(selfRunnerName).",
+                                  detail: "It runs on that Mac, so start it there and check tailscale serve is passing port \(runnerEndpoint?.url.port ?? RunnerConfig.defaultPort) to it. \(reason)",
+                                  showRetry: true)
+                }
                 return Banner(style: .warning, icon: "bolt.horizontal.circle", text: "Can't reach the runner.", detail: reason,
                               showStart: canStartRunner, showRetry: true)
             case .lost:

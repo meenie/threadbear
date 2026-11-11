@@ -53,10 +53,10 @@ extension Automation {
         }
         if let title = c["menu"] as? String {
             guard let item = find(title) else { return "error no row \(title)" }
-            return "ok " + highlightMenu(item, in: thread).map(\.title).joined(separator: " | ")
+            return "ok " + highlightMenu(item, in: thread, away: app.filesAway(thread)).map(\.title).joined(separator: " | ")
         }
         if let chosen = c["choose"] as? String, let title = c["row"] as? String {
-            guard let item = find(title), let entry = highlightMenu(item, in: thread).first(where: { $0.title == chosen }) else { return "error no menu item \(chosen)" }
+            guard let item = find(title), let entry = highlightMenu(item, in: thread, away: app.filesAway(thread)).first(where: { $0.title == chosen }) else { return "error no menu item \(chosen)" }
             entry.action?(app, item, thread)
             try? await Task.sleep(for: .milliseconds(200))
             return "ok " + (NSPasteboard.general.string(forType: .string) ?? "")
@@ -88,11 +88,11 @@ extension Automation {
 
     /// A row's menu, as HighlightsView builds it (FileMenu, LinkMenu, Copy
     /// sha, Divider, Remove), with what each item does.
-    private static func highlightMenu(_ item: Highlight, in thread: ThreadSummary) -> [(title: String, action: ((AppModel, Highlight, ThreadSummary) -> Void)?)] {
+    private static func highlightMenu(_ item: Highlight, in thread: ThreadSummary, away: Bool) -> [(title: String, action: ((AppModel, Highlight, ThreadSummary) -> Void)?)] {
         var items: [(title: String, action: ((AppModel, Highlight, ThreadSummary) -> Void)?)] = []
         if let path = item.path {
             items.append(("Preview here", { app, item, thread in app.preview(path: path, title: item.title, in: thread) }))
-            if thread.isRemote {
+            if away {
                 items.append(("Open", { app, item, thread in app.openRemoteFile(URL(fileURLWithPath: path), .app, in: thread, title: item.title) }))
             } else {
                 items.append(("Open", { app, _, _ in app.openExternally(URL(fileURLWithPath: path)) }))
@@ -672,7 +672,7 @@ extension Automation {
             guard app.selectedThread == nil else { return "error runner is for a new thread" }
             // The Default submenu, by a runner's name.
             if let name = c["setDefault"] as? String {
-                if name == "This Mac" {
+                if name == "This Mac" || name == app.selfRunnerTitle {
                     app.setDefaultRunner(nil)
                     return "ok"
                 }

@@ -128,7 +128,7 @@ final class ThreadSession {
         let threadId = threadId
         let expanded = expanded
         // Another Mac's thread draws no pictures from this Mac (MarkdownRenderer.localPictures).
-        let localPictures = !(app?.isRemote(threadId) ?? false)
+        let localPictures = !(app?.filesAway(threadId) ?? false)
         // File rows name folders from the thread's folder.
         let root = app?.threads[threadId]?.cwd
         let signpost = perfLog.beginInterval("open", id: perfLog.makeSignpostID(), "\(threadId)")
@@ -212,7 +212,7 @@ final class ThreadSession {
         let threadId = threadId
         let expanded = expanded
         // Another Mac's thread draws no pictures from this Mac (MarkdownRenderer.localPictures).
-        let localPictures = !(app?.isRemote(threadId) ?? false)
+        let localPictures = !(app?.filesAway(threadId) ?? false)
         let root = app?.threads[threadId]?.cwd
         loadTask = Task {
             defer { loadTask = nil }
@@ -610,7 +610,7 @@ final class ThreadSession {
         let width = view?.width ?? 800
         let expanded = expanded
         // Another Mac's thread draws no pictures from this Mac (MarkdownRenderer.localPictures).
-        let localPictures = !(app?.isRemote(threadId) ?? false)
+        let localPictures = !(app?.filesAway(threadId) ?? false)
         if displayStart > 0 {
             let newStart = max(0, displayStart - Self.pageRows)
             let rows = Array(feed.model.rows[newStart..<displayStart])

@@ -262,8 +262,12 @@ struct TerminalTarget: Equatable {
         if thread.isArchived {
             return TerminalTarget(key: .home, cwd: home, note: "This thread is archived, so this terminal is in your home folder.")
         }
-        if thread.isRemote {
-            let where_ = runnerName(thread).map { "on \($0)" } ?? "on another machine"
+        // Another runner's thread, or the app's own runner on another Mac
+        // (runner.json's host): its folder is there, not here. `runnerName`
+        // names the Mac its files are on, nil for this one.
+        let away = runnerName(thread)
+        if thread.isRemote || away != nil {
+            let where_ = away.map { "on \($0)" } ?? "on another machine"
             return TerminalTarget(key: .home, cwd: home, note: "This thread runs \(where_), so this terminal is on this Mac, in your home folder.")
         }
         var isDir: ObjCBool = false
@@ -437,7 +441,7 @@ struct TerminalPanel: View {
     @Environment(AppModel.self) private var app
 
     var body: some View {
-        let target = TerminalTarget.for(app.selectedThread) { app.runnerName(of: $0) }
+        let target = TerminalTarget.for(app.selectedThread) { app.awayName(of: $0) }
         let session = Terminals.shared.existing(for: target)
         VStack(spacing: 0) {
             if let note = target.note {

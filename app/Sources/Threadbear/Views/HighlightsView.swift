@@ -309,7 +309,7 @@ struct HighlightsView: View {
             ForEach(paths, id: \.self) { path in
                 PaneRow(icon: FileIcon.symbol(forPath: path), title: (path as NSString).lastPathComponent,
                         detail: HighlightText.folder(of: path, cwd: thread.cwd), indent: true) {
-                    if thread.isRemote {
+                    if app.filesAway(thread) {
                         app.openRemoteFile(URL(fileURLWithPath: path), .app, in: thread)
                     } else {
                         app.openExternally(URL(fileURLWithPath: path))
@@ -581,7 +581,7 @@ struct FileMenu: View {
 
     var body: some View {
         Button("Preview here", systemImage: "sidebar.right") { app.preview(path: path, title: title, in: thread) }
-        if thread.isRemote {
+        if app.filesAway(thread) {
             // On that Mac: its copy here, once it's fetched.
             Button("Open", systemImage: "arrow.up.forward.app") { app.openRemoteFile(URL(fileURLWithPath: path), .app, in: thread, title: title) }
         } else {

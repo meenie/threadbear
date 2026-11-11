@@ -1147,13 +1147,28 @@ extension AppModel {
         var refs: [ImageRef] = []
         for url in urls {
             do {
-                refs.append(try await client.importMedia(path: url.path))
+                refs.append(try await importImage(url, client: client))
             } catch {
                 show(error)
             }
         }
         return refs
     }
+
+    /// One picture into the runner's inbox. The runner opens a path on its
+    /// own Mac, so one on another Mac (runner.json's `host`) is sent the
+    /// bytes instead: a pasted screenshot's file is here, not there.
+    func importImage(_ url: URL, client: RPCClient) async throws -> ImageRef {
+        guard runnerAway else { return try await client.importMedia(path: url.path) }
+        let data = try await Task.detached(priority: .userInitiated) { try Data(contentsOf: url) }.value
+        // The runner takes messages up to 64 MB, and base64 is a third bigger.
+        guard data.count <= Self.maxSentPicture else {
+            throw RPCError.server(code: -32602, message: "\(url.lastPathComponent) is too big to send to \(selfRunnerName) (over 40 MB).")
+        }
+        return try await client.importMedia(data: data, name: url.lastPathComponent)
+    }
+
+    static let maxSentPicture = 40 * 1024 * 1024
 
     /// A reply button's pill was clicked (docs/protocol.md, "Reply
     /// buttons"). Not pressed yet: presses it, dimmed with "…" until the
